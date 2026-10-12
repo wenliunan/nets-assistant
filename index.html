@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>篮网赛后分析助手</title>
+<style>
+  :root {
+    --bg0: #07080c;
+    --bg1: #0d0f16;
+    --bg2: #131622;
+    --card: rgba(22, 26, 38, 0.72);
+    --card-solid: #161a26;
+    --line: rgba(255, 255, 255, 0.08);
+    --line2: rgba(255, 255, 255, 0.14);
+    --text: #eceef4;
+    --muted: #8a93a6;
+    --orange: #ff7a1a;
+    --orange2: #ffb347;
+    --green: #34d399;
+    --red: #ff6b6b;
+    --blue: #60a5fa;
+    --radius: 16px;
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(1100px 560px at 85% -12%, rgba(255, 122, 26, 0.14), transparent 60%),
+      radial-gradient(900px 520px at -5% 0%, rgba(96, 165, 250, 0.10), transparent 55%),
+      radial-gradient(700px 500px at 50% 120%, rgba(255, 179, 71, 0.06), transparent 60%),
+      var(--bg0);
+    color: var(--text);
+    line-height: 1.75;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 100%);
+  }
+  ::selection { background: rgba(255, 122, 26, 0.35); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2a3040; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4154; background-clip: padding-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 34px 20px 70px; position: relative; z-index: 1; }
+
+  /* ===== Header ===== */
+  header { text-align: center; padding: 10px 0 4px; }
+  .logo {
+    width: 74px; height: 74px; margin: 0 auto 14px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 32% 28%, #ffb347, #ff7a1a 45%, #c94e06 100%);
+    border-radius: 50%; box-shadow: 0 0 0 5px rgba(255,122,26,0.12), 0 0 46px rgba(255,122,26,0.4), inset 0 -6px 14px rgba(0,0,0,0.35);
+  }
+  .logo svg { width: 52px; height: 52px; }
+  header h1 {
+    font-size: 30px; font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(92deg, #fff 10%, #ffd9a8 40%, #ff8c2e 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 30px rgba(255,122,26,0.2);
+  }
+  header .sub { color: var(--muted); margin-top: 9px; font-size: 13.5px; letter-spacing: 0.3px; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px 24px; margin-top: 18px; box-shadow: var(--shadow);
+    transition: border-color .2s, transform .2s;
+  }
+  .card:hover { border-color: var(--line2); }
+  .card h2 { font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; gap: 9px; letter-spacing: 0.4px; }
+  .card h2 .bar { width: 4px; height: 18px; border-radius: 3px; background: linear-gradient(180deg, var(--orange2), var(--orange)); box-shadow: 0 0 12px rgba(255,122,26,0.6); }
+
+  /* ===== Settings ===== */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .settings-grid .full { grid-column: 1 / -1; }
+  @media (max-width: 640px) { .settings-grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 7px; font-weight: 500; }
+  input[type=text], input[type=password], input[type=date], select, textarea {
+    width: 100%; background: rgba(9, 11, 17, 0.6); border: 1px solid var(--line);
+    color: var(--text); border-radius: 11px; padding: 11px 13px; font-size: 14px;
+    font-family: inherit; outline: none; transition: border .16s, box-shadow .16s, background .16s;
+  }
+  input:hover, select:hover, textarea:hover { border-color: var(--line2); }
+  input:focus, select:focus, textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,122,26,0.16); background: rgba(9,11,17,0.85); }
+  textarea { resize: vertical; min-height: 92px; line-height: 1.7; }
+  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(3) hue-rotate(-20deg); cursor: pointer; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+  /* ===== Tabs ===== */
+  .tabs { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  .tab {
+    flex: 1; min-width: 150px; text-align: center; padding: 13px 12px;
+    background: rgba(22, 26, 38, 0.5); border: 1px solid var(--line); border-radius: 13px;
+    cursor: pointer; color: var(--muted); font-weight: 600; font-size: 15px;
+    transition: all .2s; position: relative; overflow: hidden;
+  }
+  .tab:hover { border-color: var(--line2); color: var(--text); transform: translateY(-1px); }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(255,122,26,0.28), rgba(255,179,71,0.12));
+    border-color: rgba(255,122,26,0.55); color: #fff;
+    box-shadow: 0 6px 22px rgba(255,122,26,0.18);
+  }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .3s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  @media (max-width: 640px) { .row2 { grid-template-columns: 1fr; } }
+
+  /* ===== Buttons ===== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 11px 19px; border-radius: 11px; border: 1px solid transparent;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: transform .12s, filter .18s, background .18s, border .18s, box-shadow .18s;
+    user-select: none;
+  }
+  .btn:active { transform: translateY(1px) scale(0.99); }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff7a1a, #ff9430); color: #fff;
+    box-shadow: 0 8px 22px rgba(255,122,26,0.35);
+  }
+  .btn-primary:hover { filter: brightness(1.09); box-shadow: 0 10px 28px rgba(255,122,26,0.5); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+  .btn-ghost { background: rgba(255,255,255,0.03); border-color: var(--line2); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--orange); background: rgba(255,122,26,0.08); }
+  .btn-sm { padding: 7px 13px; font-size: 12.5px; border-radius: 9px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+  /* ===== ESPN 查证 ===== */
+  .es-line { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .es-line > div:first-child { flex: 1; min-width: 200px; }
+  .es-result {
+    margin-top: 14px; padding: 16px 18px; background: rgba(9,11,17,0.5);
+    border: 1px solid var(--line); border-radius: 12px; display: none;
+  }
+  .es-result.show { display: block; animation: fade .25s; }
+  .es-match { font-size: 15px; font-weight: 700; }
+  .es-score { font-size: 22px; font-weight: 800; margin: 4px 0; background: linear-gradient(90deg,#fff,#ffd9a8); -webkit-background-clip:text; background-clip:text; color: transparent; }
+  .es-leaders { color: var(--muted); font-size: 13px; margin: 6px 0 12px; }
+  .es-leaders b { color: var(--orange2); font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 20px; background: rgba(255,122,26,0.15); border: 1px solid rgba(255,122,26,0.4); color: var(--orange2); margin-left: 8px; vertical-align: middle; }
+  .tag.final { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); color: var(--green); }
+  .tag.live { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.4); color: var(--red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: 0.55; } }
+
+  /* ===== Result ===== */
+  .result {
+    margin-top: 18px; background: rgba(9, 11, 17, 0.55); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 24px; display: none;
+  }
+  .result.show { display: block; animation: fade .3s; }
+  .result-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .result-head .title { font-weight: 700; font-size: 15px; }
+
+  .md h1, .md h2, .md h3, .md h4 { margin: 16px 0 9px; font-weight: 700; line-height: 1.4; }
+  .md h1 { font-size: 20px; } .md h2 { font-size: 18px; } .md h3 { font-size: 16px; }
+  .md p { margin: 9px 0; }
+  .md ul { padding-left: 21px; margin: 9px 0; }
+  .md li { margin: 5px 0; }
+  .md strong { color: #ffb347; font-weight: 600; }
+  .sec-head {
+    display: flex; gap: 9px; align-items: baseline; margin: 18px 0 8px;
+    padding: 11px 14px; background: rgba(255,122,26,0.06);
+    border-left: 3px solid var(--orange); border-radius: 7px; font-weight: 700; font-size: 16px;
+  }
+  .sec-num { color: var(--orange); }
+
+  /* ===== Loading / status ===== */
+  .loading { display: none; align-items: center; gap: 11px; margin-top: 16px; color: var(--muted); font-size: 14px; }
+  .loading.show { display: flex; }
+  .spinner {
+    width: 17px; height: 17px; border: 2.5px solid rgba(255,122,26,0.25);
+    border-top-color: var(--orange); border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { margin-top: 12px; font-size: 13px; display: none; padding: 11px 14px; border-radius: 10px; line-height: 1.6; }
+  .status.show { display: block; }
+  .status.err { background: rgba(255,107,107,0.1); color: #ff9a9a; border: 1px solid rgba(255,107,107,0.32); }
+  .status.ok { background: rgba(52,211,153,0.1); color: #86efac; border: 1px solid rgba(52,211,153,0.3); }
+
+  .chip { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: var(--card-solid); border: 1px solid var(--line); color: var(--muted); margin: 3px 5px 3px 0; }
+
+  /* ===== Checklist ===== */
+  .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+  @media (max-width: 640px) { .checklist { grid-template-columns: 1fr; } }
+  .checklist label { display: flex; align-items: center; gap: 9px; cursor: pointer; color: var(--text); font-size: 13px; margin: 0; }
+  .checklist input { width: auto; accent-color: var(--orange); cursor: pointer; }
+
+  /* ===== 排名表 ===== */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { color: var(--muted); text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line2); font-weight: 600; white-space: nowrap; }
+  .data-table td { padding: 6px 9px; border-bottom: 1px solid var(--line); }
+  .data-table tr.nets-row { background: rgba(255, 122, 26, 0.12); font-weight: 700; }
+  .data-table tr.nets-row td:first-child { color: var(--orange2); }
+
+  /* ===== 球员译名 ===== */
+  .player-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .player-row:last-child { border-bottom: none; }
+  .player-en { flex: 0 0 230px; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-cn { flex: 1; }
+  @media (max-width: 640px) { .player-en { flex-basis: 130px; } }
+
+  /* ===== 赛程日历 ===== */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; color: var(--muted); font-size: 12px; padding: 6px 0; font-weight: 600; }
+  .cal-cell { min-height: 72px; background: rgba(9,11,17,0.45); border: 1px solid var(--line); border-radius: 8px; padding: 4px 5px; }
+  .cal-cell.other { opacity: 0.25; }
+  .cal-cell.today { border-color: var(--orange); box-shadow: inset 0 0 0 1px var(--orange); }
+  .cal-date { font-size: 12px; color: var(--muted); line-height: 1.2; }
+  .cal-game { display: block; margin-top: 3px; font-size: 11px; padding: 2px 4px; border-radius: 5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; line-height: 1.4; }
+  .cal-game.win { background: rgba(52,211,153,0.14); color: #7ef0a8; border: 1px solid rgba(52,211,153,0.35); }
+  .cal-game.loss { background: rgba(255,107,107,0.14); color: #ff9a9a; border: 1px solid rgba(255,107,107,0.35); }
+  .cal-game.upcoming { background: rgba(96,165,250,0.14); color: #93c5fd; border: 1px solid rgba(96,165,250,0.35); }
+  .cal-game:hover { filter: brightness(1.25); }
+  @media (max-width: 640px) { .cal-cell { min-height: 56px; } .cal-game { font-size: 10px; } }
+
+  /* ===== 未保存提醒 ===== */
+  .unsaved-badge {
+    position: fixed; right: 20px; bottom: 20px; z-index: 90;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,122,26,0.16); border: 1px solid rgba(255,122,26,0.55);
+    color: #ffd9a8; padding: 10px 14px; border-radius: 12px; font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45); backdrop-filter: blur(10px);
+    animation: fade .3s;
+  }
+  .unsaved-badge button { background: var(--orange); color: #fff; border: none; padding: 5px 12px; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 700; }
+  .unsaved-badge button:hover { filter: brightness(1.1); }
+
+  /* ===== History ===== */
+  .hist-item {
+    display: flex; align-items: flex-start; gap: 14px; padding: 15px 16px;
+    background: rgba(9,11,17,0.5); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px;
+    transition: border .18s, transform .18s;
+  }
+  .hist-item:hover { border-color: var(--line2); transform: translateX(2px); }
+  .hist-type {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; background: rgba(255,122,26,0.12); border: 1px solid rgba(255,122,26,0.3);
+  }
+  .hist-type.review { background: rgba(96,165,250,0.12); border-color: rgba(96,165,250,0.3); }
+  .hist-main { flex: 1; min-width: 0; }
+  .hist-title { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .hist-actions { display: flex; gap: 7px; flex-shrink: 0; flex-wrap: wrap; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 10px; font-size: 14px; }
+
+  /* ===== Modal ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.66); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card-solid); border: 1px solid var(--line2); border-radius: 16px;
+    max-width: 760px; width: 100%; max-height: 84vh; display: flex; flex-direction: column; box-shadow: var(--shadow);
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .modal-head .t { font-weight: 700; font-size: 15px; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 26px; cursor: pointer; line-height: 1; padding: 0 6px; }
+  .modal-close:hover { color: #fff; }
+  .modal-body { padding: 20px 22px; overflow-y: auto; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 44px; line-height: 1.9; }
+  footer a { color: var(--orange2); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="47" fill="none" stroke="#7a2d00" stroke-width="2.5"/>
+        <path d="M50 3 L50 97 M3 50 L97 50" stroke="#7a2d00" stroke-width="2.5" fill="none"/>
+        <path d="M14 24 Q 50 50 14 76" stroke="#7a2d00" stroke-width="2.5" fill="none"/>
+        <path d="M86 24 Q 50 50 86 76" stroke="#7a2d00" stroke-width="2.5" fill="none"/>
+      </svg>
+    </div>
+    <h1>篮网赛后分析助手</h1>
+    <div class="sub">专业分析 · 幽默表达 · 哲学思考 —— 为篮网创作者打造的抖音口播文案工具</div>
+  </header>
+
+  <!-- ============ 设置 ============ -->
+  <div class="card">
+    <h2><span class="bar"></span>接口设置</h2>
+    <div class="settings-grid">
+      <div class="full">
+        <label>DeepSeek API Key（仅保存在本机浏览器，不会上传）</label>
+        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div>
+        <label>模型</label>
+        <select id="model">
+          <option value="deepseek-chat">deepseek-chat（快）</option>
+          <option value="deepseek-reasoner">deepseek-reasoner（更深入）</option>
+        </select>
+      </div>
+      <div>
+        <label>接口地址</label>
+        <input type="text" id="baseUrl" value="https://api.deepseek.com" placeholder="https://api.deepseek.com">
+      </div>
+      <div class="full">
+        <label>账号名称（用于结尾语「这里是【账号名称】…」）</label>
+        <input type="text" id="accountName" placeholder="例如：篮网观察室（留空则用占位符）">
+        <div class="hint">⚠️ 若浏览器报跨域(CORS)错误，请在接口地址填你的代理地址。ESPN 数据接口已内置、无需任何 Key。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Tabs ============ -->
+  <nav class="tabs">
+    <div class="tab active" data-tab="analyze">🏀 比赛分析</div>
+    <div class="tab" data-tab="review">📝 文案审稿</div>
+    <div class="tab" data-tab="history">🕘 历史 / 草稿</div>
+    <div class="tab" data-tab="prompt">⚙️ 提示词中心</div>
+    <div class="tab" data-tab="players">🏷️ 球员译名</div>
+  </nav>
+
+  <!-- ==================== 比赛分析 ==================== -->
+  <section class="panel active" id="panel-analyze">
+
+    <div class="card">
+      <h2><span class="bar"></span>联网查证 · 实时数据（ESPN）</h2>
+      <div class="es-line">
+        <div>
+          <label>比赛日期</label>
+          <input type="date" id="esDate">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="quickDate(0)">今天</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickDate(-1)">昨天</button>
+        <button class="btn btn-primary" onclick="fetchNetsGame()">🔍 查篮网当天比赛</button>
+      </div>
+      <div class="hint">真实调用 ESPN 公开接口拉取篮网比赛：比分、得分/篮板/助攻王、球队命中率。查证后再「填入表单」。</div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="deepLink('hupu')">🐯 虎扑核对</button>
+        <button class="btn btn-ghost btn-sm" onclick="deepLink('tencent')">🐧 腾讯体育</button>
+        <button class="btn btn-ghost btn-sm" onclick="deepLink('espn')">🇺🇸 ESPN 官网</button>
+      </div>
+      <div class="es-result" id="esResult"></div>
+      <div class="status" id="esStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="bar"></span>战绩与排名（ESPN）</h2>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-primary btn-sm" onclick="fetchStandings()">📊 查篮网战绩与排名</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleStandingsTable()">📋 展开 / 收起分区排名表</button>
+      </div>
+      <div class="es-result" id="standSummary"></div>
+      <div class="es-result" id="standTable" style="max-height:430px;overflow-y:auto"></div>
+      <div class="status" id="standStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="bar"></span>篮网赛程日历（ESPN）</h2>
+      <div class="btn-row" style="margin-top:0">
+        <select id="seasonSel" style="width:auto;min-width:150px">
+          <option value="">本赛季（自动）</option>
+          <option value="2026">2025-26 赛季</option>
+          <option value="2025">2024-25 赛季</option>
+          <option value="2024">2023-24 赛季</option>
+          <option value="2023">2022-23 赛季</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="fetchSchedule()">📅 查询赛程</button>
+      </div>
+      <div class="hint">按月份列出篮网全部比赛：对手、主客场、胜负比分或开赛时间。点「分析这场」可直接填表（已结束的自动拉数据）。</div>
+      <div class="es-result" id="schedResult">
+        <div class="cal-head">
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="calShift(-1)">‹ 上月</button>
+            <button class="btn btn-ghost btn-sm" onclick="calShift(0)">本月</button>
+            <button class="btn btn-ghost btn-sm" onclick="calShift(1)">下月 ›</button>
+          </div>
+          <span id="calLabel" style="font-weight:700;font-size:15px"></span>
+        </div>
+        <div class="hint" id="calSummary" style="margin-bottom:8px"></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="status" id="schedStatus"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="bar"></span>比赛信息</h2>
+      <div class="row2">
+        <div>
+          <label>对手 &amp; 比赛日期</label>
+          <input type="text" id="gOpp" placeholder="例如：篮网 vs 凯尔特人，2026-10-09">
+        </div>
+        <div>
+          <label>比分 / 结果</label>
+          <input type="text" id="gScore" placeholder="例如：篮网 112-108 凯尔特人">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label>关键数据与球员表现</label>
+        <textarea id="gStats" placeholder="得分、篮板、助攻、命中率、关键球员表现…"></textarea>
+      </div>
+      <div style="margin-top:12px">
+        <label>关键回合 / 比赛转折点</label>
+        <textarea id="gTurns" placeholder="例如：第三节还剩4分钟时一波12-0…"></textarea>
+      </div>
+      <div class="row2" style="margin-top:12px">
+        <div>
+          <label>伤病 / 交易 / 其他背景</label>
+          <textarea id="gOther" placeholder="例如：某主力轮休、某新秀首秀…"></textarea>
+        </div>
+        <div>
+          <label>想重点讨论的方向（可选）</label>
+          <textarea id="gFocus" placeholder="例如：防守体系、年轻球员成长、轮换…"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label>已核实证据 / 来源（优先使用）</label>
+        <textarea id="gSources" placeholder="把查到的比分、数据、回合详情或链接粘贴到这里…"></textarea>
+      </div>
+      <div class="hint" id="draftHint1"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGen" onclick="generateAnalysis()">⚡ 用 DeepSeek 生成文案</button>
+      <button class="btn btn-ghost" onclick="copyFullPrompt('analyze')">📋 复制完整提示词</button>
+      <button class="btn btn-ghost" id="btnStop" onclick="stopGen()" style="display:none">⏹ 停止</button>
+    </div>
+
+    <div class="loading" id="loading1"><span class="spinner"></span><span id="loadingText1">正在分析比赛并生成文案…</span></div>
+    <div class="status" id="status1"></div>
+
+    <div class="result" id="result1">
+      <div class="result-head">
+        <span class="title">📄 生成结果</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="copyResult('result1')">📋 复制全文</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadResult('result1')">⬇ 下载 .txt</button>
+          <button class="btn btn-ghost btn-sm" onclick="saveCurrent('analyze')">💾 存历史</button>
+        </div>
+      </div>
+      <div class="md" id="resultBody1"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 文案审稿 ==================== -->
+  <section class="panel" id="panel-review">
+    <div class="card">
+      <h2><span class="bar"></span>上传你的文案</h2>
+      <label>粘贴需要审稿 / 优化的口播文案</label>
+      <textarea id="rScript" style="min-height:190px" placeholder="把你自己写的口播稿粘贴到这里…"></textarea>
+      <div style="margin-top:14px">
+        <label>审稿重点（不选则全面审稿）</label>
+        <div class="checklist" style="margin-top:8px">
+          <label><input type="checkbox" value="事实核查" checked> 事实核查（是否编造）</label>
+          <label><input type="checkbox" value="语言风格" checked> 语言风格</label>
+          <label><input type="checkbox" value="结构与核心观点" checked> 结构与核心观点</label>
+          <label><input type="checkbox" value="幽默" checked> 幽默</label>
+          <label><input type="checkbox" value="哲学收尾" checked> 哲学收尾</label>
+          <label><input type="checkbox" value="标题" checked> 标题</label>
+        </div>
+      </div>
+      <div class="hint" id="draftHint2"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnRev" onclick="reviewScript()">⚡ 审稿并优化</button>
+      <button class="btn btn-ghost" onclick="copyFullPrompt('review')">📋 复制审稿提示词</button>
+      <button class="btn btn-ghost" id="btnStop2" onclick="stopGen()" style="display:none">⏹ 停止</button>
+    </div>
+
+    <div class="loading" id="loading2"><span class="spinner"></span><span id="loadingText2">正在审稿…</span></div>
+    <div class="status" id="status2"></div>
+
+    <div class="result" id="result2">
+      <div class="result-head">
+        <span class="title">📝 审稿结果</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="copyResult('result2')">📋 复制全文</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadResult('result2')">⬇ 下载 .txt</button>
+          <button class="btn btn-ghost btn-sm" onclick="saveCurrent('review')">💾 存历史</button>
+        </div>
+      </div>
+      <div class="md" id="resultBody2"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 历史 / 草稿 ==================== -->
+  <section class="panel" id="panel-history">
+    <div class="card">
+      <h2><span class="bar"></span>草稿</h2>
+      <div class="hint" style="margin-bottom:10px">表单内容会自动实时保存到本机，刷新/关闭后不丢失。</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-ghost" onclick="restoreDraft('analyze')">📥 恢复「比赛分析」草稿</button>
+        <button class="btn btn-ghost" onclick="restoreDraft('review')">📥 恢复「审稿」草稿</button>
+        <button class="btn btn-ghost" onclick="clearDrafts()">🗑 清空所有草稿</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="bar"></span>历史记录</h2>
+      <div class="btn-row" style="margin-top:0; margin-bottom:14px">
+        <button class="btn btn-ghost btn-sm" onclick="exportHistory()">⬇ 导出 JSON</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()">🗑 清空历史</button>
+        <span class="hint" style="margin:0">最多保留最近 40 条</span>
+      </div>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 提示词中心 ==================== -->
+  <section class="panel" id="panel-prompt">
+    <div class="card">
+      <h2><span class="bar"></span>系统提示词（完整规则）</h2>
+      <div class="hint" style="margin-bottom:8px">整套需求（身份 / 流程 / 结构 / 风格 / 核查 / 输出格式）编码成的系统提示词，可复制到任何 AI 工具。</div>
+      <textarea id="pSystem" readonly style="min-height:320px; font-size:13px"></textarea>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="copyText('pSystem')">📋 复制系统提示词</button></div>
+    </div>
+    <div class="card">
+      <h2><span class="bar"></span>比赛信息输入模板</h2>
+      <textarea id="pTemplate" readonly style="min-height:170px; font-size:13px"></textarea>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="copyText('pTemplate')">📋 复制输入模板</button></div>
+    </div>
+  </section>
+
+  <!-- ==================== 球员译名 ==================== -->
+  <section class="panel" id="panel-players">
+    <div class="card">
+      <h2><span class="bar"></span>球员中文译名管理</h2>
+      <div class="hint" style="margin-bottom:12px">这里的译名用于 ESPN 数据的中文显示，修改后立即生效。内置译名可覆盖/重置，新增译名可删除。</div>
+      <div class="row2">
+        <div><label>英文名（新增或覆盖）</label><input type="text" id="pEn" placeholder="例如：Luka Doncic"></div>
+        <div><label>中文名</label><input type="text" id="pCn" placeholder="例如：卢卡·东契奇"></div>
+      </div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="addPlayer()">➕ 添加 / 覆盖</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetPlayers()">↺ 恢复全部默认</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportPlayers()">⬇ 导出 JSON</button>
+        <span class="hint" id="playerCount" style="margin:auto 0 0 auto"></span>
+      </div>
+      <div style="margin-top:14px">
+        <input type="text" id="pSearch" placeholder="🔍 搜索英文名或中文名…" oninput="renderPlayerEditor(this.value)">
+      </div>
+      <div id="playerList" style="margin-top:12px;max-height:480px;overflow-y:auto"></div>
+    </div>
+  </section>
+
+  <footer>
+    篮网赛后分析助手 · 我们不只看比分，也看看比分背后的故事。<br>
+    ESPN 数据来自公开接口；腾讯/虎扑需跳转人工核对。生成内容请对照「事实核查清单」二次确认后再发布。
+  </footer>
+</div>
+
+<!-- ============ 历史查看弹窗 ============ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-head"><span class="t" id="modalTitle">历史记录</span><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body md" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- ============ 未保存提醒 ============ -->
+<div class="unsaved-badge" id="unsavedBadge" style="display:none">
+  <span>⚠️ 有未保存的内容</span>
+  <button onclick="gotoUnsaved()">去处理</button>
+</div>
+
+<script>
+/* ================= 系统提示词（严格按需求编码） ================= */
+const SYSTEM_PROMPT = `一、你的身份
+你是一名专业的 NBA 篮球比赛分析师、短视频编剧和幽默型体育解说创作者。你专门帮助一位长期关注布鲁克林篮网队的创作者制作抖音赛后分析视频。创作者从2017年开始关注篮网，希望以篮网队为起点，逐步建立自己的篮球内容品牌。你的任务不是简单复述比赛，而是帮助创作者发现比赛中真正值得讨论的问题，并将专业分析转化成普通 NBA 球迷愿意观看、容易理解、能够产生共鸣的口播文案。
+
+二、账号定位
+内容主要面向普通 NBA 球迷，而不仅仅是篮网死忠球迷。视频需同时具备三个特点：
+1. 幽默风趣：表达自然、有梗、有画面感，让观众听起来轻松。
+2. 专业分析：通过比赛过程、球员技术特点、战术安排和可靠数据解释比赛。
+3. 哲学思考：在适当的时候，从比赛自然延伸到成长、竞争、团队、选择、失败、耐心等主题。
+三者优先级：专业分析是基础，幽默表达是吸引观众的手段，哲学思考是形成个人特色的方式。不能为了追求幽默而牺牲事实，也不能为了升华主题而强行加入人生哲理。
+
+三、分析比赛的工作流程
+收到比赛信息后，按照以下顺序进行分析。
+第一步：识别比赛中值得讨论的核心问题。不要直接从比分和球员数据开始机械复述。先判断这场比赛最值得观众了解的是什么，例如：比赛的真正转折点；球队进攻或防守体系的问题；球员技术特点与战术角色之间的关系；教练的轮换与临场调整；年轻球员的成长、局限与潜力；数据表现与实际比赛影响之间的差异；球队的建队思路与长期发展问题。
+第二步：建立证据。优先使用用户提供的比赛事实、技术统计、具体回合和可信资料。区分已知事实、合理推断和个人观点。如果缺少关键比赛信息，不要编造具体回合、数据、比分或球员表现。信息不足时，要明确提示用户补充资料，不要凭空捏造数据和信息。
+第三步：形成核心判断。整篇文案必须围绕一个主要问题展开，用一句话明确回答："这场比赛最值得讨论的事情究竟是什么？"不要在一篇短视频文案中同时分析太多无关问题。
+第四步：将分析转化成故事。按照以下逻辑组织内容：比赛现象 → 提出问题 → 展示证据 → 解释原因 → 得出判断。
+第五步：加入幽默。根据比赛情况选择适合的幽默方式：反差式幽默、生活场景类比、适度的夸张、自嘲式表达、网络化但不过时的口语表达。幽默必须服务于分析，不能只为了制造笑点。
+第六步：寻找哲学切入点。只有当比赛确实存在相关主题时，才考虑加入哲学思考。例如：年轻球员的成长→试错与成长；球队重建→耐心与机会成本；球员之间的配合→个人与集体；战术调整→决策与不确定性；球员改变打法→适应与自我认知。不要使用空洞的大道理，不要在每篇文案中重复同一句人生哲理。
+
+四、口播文案的结构
+默认制作3—6分钟的中文短视频口播稿。根据具体内容调整长度，不要为了达到时长而重复观点。推荐结构：
+第一部分：开场钩子。用有吸引力的问题、反差、争议点或者幽默表达引出比赛，不要机械地说"大家好，今天我们来分析篮网的比赛"。
+第二部分：比赛背景。简洁交代比赛结果、关键表现以及本期分析的核心问题。如果用户已经提供比分和数据，可以使用；如果没有，不要自行编造。
+第三部分：关键分析。围绕核心问题，使用一至三个有代表性的事实或比赛细节展开分析，解释球员为什么会做出某种选择，以及这些选择对比赛产生了什么影响。
+第四部分：幽默表达。在适当的位置加入自然的幽默、类比或形象化表达，避免每句话都刻意制造笑点。
+第五部分：核心结论。明确告诉观众，你认为比赛最关键的问题是什么，判断依据是什么，以及这对球队意味着什么。
+第六部分：哲学收尾。如果比赛内容适合，可以用一段简洁、有思考价值的话收尾；如果没有合适的切入点，就用一个有力的篮球观点结束，不必强行升华。
+结尾可使用账号结尾："这里是【{账号名称}】，我们不只看比分，也看看比分背后的故事。"
+
+五、语言风格
+必须使用自然的简体中文口语，文案应该像一个懂篮球、善于观察、幽默但有独立思考能力的年轻人，在和其他球迷聊天。具体要求：
+1. 句子清晰，方便配音。
+2. 避免过多专业术语；必须使用时，尽量用通俗语言解释。
+3. 不要像新闻播报员一样机械念数据。
+4. 不要像教科书一样罗列战术知识。
+5. 不要使用过多夸张的感叹句。
+6. 不要每隔几句话就强行插入网络梗。
+7. 不要使用过于刻意、空洞或生硬的哲学句子。
+8. 允许提出有争议的观点，但必须说明依据。
+9. 不要为了吸引流量而恶意贬低球员、编造冲突或夸大事实。
+10. 不要把个人推测写成已经证实的事实。
+
+六、事实核查规则
+比赛结果、比分、技术统计、球员出场情况、交易信息、伤病信息和选秀权归属，都必须以可靠信息为依据。如果用户提供的信息存在矛盾，应指出矛盾，不要直接照搬。如果无法核实某个事实，应明确标注需要核实。不得为了让文案更精彩而编造：比赛回合、球员数据、球员言论、教练的真实意图、球员的心理活动、未经证实的交易消息。战术判断应当尽可能结合具体回合或数据。如果证据不足，可以提出一种可能的解释，但必须使用审慎的表达。
+
+七、输出格式
+每次生成文案时，严格按照以下格式输出（正文不要混入过多制作说明）：
+一、视频核心观点——用一句话说明整篇视频想表达什么。
+二、标题——提供5个标题，分别采用：悬念型、观点型、幽默型、争议讨论型、深度思考型。标题必须与实际内容一致，不得夸大事实。
+三、完整口播稿——提供可以直接用于录音的完整中文文案。
+四、幽默设计说明——指出文案中最重要的两至三个幽默表达，以及它们为什么适合当前比赛。
+五、哲学收尾说明——说明结尾的思考从哪个比赛现象引出；如果没有合适的哲学切入点，应明确说明，不要硬凑。
+六、事实核查清单——列出文案中需要确认的比分、数据、回合、球员信息或其他事实；如果没有需要额外核实的内容，也要说明这一点。
+七、发布建议——提供一句视频简介，以及适合这条内容的相关话题标签。
+
+八、最终目标
+你的最终目标不是生成一篇看起来华丽的篮球文章，而是帮助创作者制作一条：普通 NBA 球迷能够听懂、有明确观点和事实依据、幽默自然、专业分析有说服力、有机会让观众产生评论和讨论、能够逐步形成创作者个人特色的赛后分析视频文案。`;
+
+const REVIEW_PROMPT = `你是一名资深的短视频文案审稿人，专攻 NBA 篮球赛后分析口播稿。你的任务是根据以下标准，对用户上传的文案进行审稿，指出问题并给出优化后的版本。审稿要具体、可执行，不要空泛。
+
+审稿标准：
+1. 事实核查：检查是否有编造的比分、数据、回合、球员言论、教练意图、球员心理活动、未经证实的交易消息；是否把推测写成了事实；是否存在矛盾信息。
+2. 核心观点：是否围绕一个核心问题展开，是否同时塞入太多无关问题。
+3. 结构：是否具备"开场钩子 → 比赛背景 → 关键分析 → 幽默表达 → 核心结论 → 哲学收尾"的合理结构。
+4. 语言风格：是否自然口语化、方便配音；是否像新闻播报员一样机械念数据；是否教科书式罗列战术；是否过度使用感叹句或网络梗。
+5. 幽默：幽默是否自然、是否服务于分析、是否为制造笑点而牺牲事实。
+6. 哲学：结尾的思考是否有明确的比赛现象作为引子，是否空洞、生硬或强行升华。
+7. 标题：是否夸大事实、是否与正文内容一致。
+
+输出格式：
+一、总体评价——一句话概括这条文案的整体水平。
+二、主要问题——逐条列出发现的问题，每条按「问题描述 + 具体位置 + 为什么不好 + 怎么改」来写。
+三、事实风险提示——列出所有需要核实或存在编造风险的事实点。
+四、优化后文案——给出修改后的完整口播稿（保留原文优点，修正问题，可直接录音）。
+五、优化说明——简要说明你做了哪些关键改动、为什么。
+
+原则：尊重原文，不为了改而改；没有问题的部分不要硬挑毛病；事实不清的部分宁可标注"需核实"也不要替你补全。`;
+
+const INPUT_TEMPLATE = `请根据以下比赛信息，生成一篇篮网队赛后分析短视频口播文案。
+
+【账号名称】：{账号名称}
+
+【比赛信息】
+- 比赛：{对手 与 日期}
+- 比分/结果：{比分}
+- 关键数据与球员表现：{数据}
+- 关键回合/转折点：{回合}
+- 伤病/交易/其他背景：{其他}
+- 想重点讨论的方向：{方向}
+
+【已核实证据/来源（优先使用）】
+{来源，若为空则提示我补充}
+
+请严格按照系统提示中的「输出格式」输出，并遵守事实核查规则：信息不足时不要编造，明确提示我补充资料。`;
+
+/* ================= 常量 ================= */
+const NETS_ID = '17'; // ESPN 布鲁克林篮网 team id
+const NETS_KEYWORDS = ['nets', 'brooklyn', '篮网', '布鲁克林'];
+
+/* 30 支球队中文名（按 ESPN team id） */
+const TEAM_CN = {
+  '1': '亚特兰大老鹰', '2': '波士顿凯尔特人', '3': '新奥尔良鹈鹕', '4': '芝加哥公牛',
+  '5': '克利夫兰骑士', '6': '达拉斯独行侠', '7': '丹佛掘金', '8': '底特律活塞',
+  '9': '金州勇士', '10': '休斯顿火箭', '11': '印第安纳步行者', '12': '洛杉矶快船',
+  '13': '洛杉矶湖人', '14': '迈阿密热火', '15': '密尔沃基雄鹿', '16': '明尼苏达森林狼',
+  '17': '布鲁克林篮网', '18': '纽约尼克斯', '19': '奥兰多魔术', '20': '费城76人',
+  '21': '菲尼克斯太阳', '22': '波特兰开拓者', '23': '萨克拉门托国王', '24': '圣安东尼奥马刺',
+  '25': '俄克拉荷马城雷霆', '26': '犹他爵士', '27': '华盛顿奇才', '28': '多伦多猛龙',
+  '29': '孟菲斯灰熊', '30': '夏洛特黄蜂'
+};
+
+/* 知名球员中文名（键为英文名，去重音；查不到则保留英文） */
+const PLAYER_CN = {
+  "Mikal Bridges": "米卡尔·布里奇斯", "Cameron Johnson": "卡梅伦·约翰逊", "Nic Claxton": "尼克·克拉克斯顿",
+  "Ben Simmons": "本·西蒙斯", "Spencer Dinwiddie": "斯宾塞·丁威迪", "Dorian Finney-Smith": "多里安·芬尼-史密斯",
+  "Cam Thomas": "卡姆·托马斯", "Dennis Schroder": "丹尼斯·施罗德", "Noah Clowney": "诺阿·克劳尼",
+  "Jalen Wilson": "贾伦·威尔逊", "Keon Johnson": "基恩·约翰逊", "Day'Ron Sharpe": "戴罗恩·夏普",
+  "Dariq Whitehead": "达里克·怀特黑德", "Ziaire Williams": "齐亚尔·威廉姆斯", "Trendon Watford": "特伦顿·沃特福德",
+  "Shake Milton": "谢克·米尔顿", "Tyrese Martin": "泰雷斯·马丁",
+  "LeBron James": "勒布朗·詹姆斯", "Stephen Curry": "斯蒂芬·库里", "Kevin Durant": "凯文·杜兰特",
+  "Giannis Antetokounmpo": "扬尼斯·阿德托昆博", "Nikola Jokic": "尼古拉·约基奇", "Luka Doncic": "卢卡·东契奇",
+  "Jayson Tatum": "杰森·塔图姆", "Joel Embiid": "乔尔·恩比德", "Shai Gilgeous-Alexander": "谢伊·吉尔杰斯-亚历山大",
+  "Anthony Davis": "安东尼·戴维斯", "Devin Booker": "德文·布克", "Ja Morant": "贾·莫兰特",
+  "Donovan Mitchell": "多诺万·米切尔", "Anthony Edwards": "安东尼·爱德华兹", "Kawhi Leonard": "科怀·伦纳德",
+  "Paul George": "保罗·乔治", "Jimmy Butler": "吉米·巴特勒", "Bam Adebayo": "巴姆·阿德巴约",
+  "Damian Lillard": "达米安·利拉德", "Trae Young": "特雷·杨", "Kyrie Irving": "凯里·欧文",
+  "De'Aaron Fox": "达龙·福克斯", "Domantas Sabonis": "多曼塔斯·萨博尼斯", "Tyrese Haliburton": "泰雷斯·哈利伯顿",
+  "James Harden": "詹姆斯·哈登", "Karl-Anthony Towns": "卡尔-安东尼·唐斯", "Rudy Gobert": "鲁迪·戈贝尔",
+  "Zion Williamson": "锡安·威廉森", "Brandon Ingram": "布兰登·英格拉姆", "CJ McCollum": "CJ·麦科勒姆",
+  "C.J. McCollum": "CJ·麦科勒姆", "DeMar DeRozan": "德玛尔·德罗赞", "Zach LaVine": "扎克·拉文",
+  "Nikola Vucevic": "尼古拉·武切维奇", "Jalen Brunson": "杰伦·布伦森", "Julius Randle": "朱利叶斯·兰德尔",
+  "OG Anunoby": "OG·阿奴诺比", "Pascal Siakam": "帕斯卡尔·西亚卡姆", "Scottie Barnes": "斯科蒂·巴恩斯",
+  "LaMelo Ball": "拉梅洛·鲍尔", "Tyrese Maxey": "泰雷斯·马克西", "Cade Cunningham": "凯德·坎宁安",
+  "Jaren Jackson Jr.": "小贾伦·杰克逊", "Desmond Bane": "德斯蒙德·贝恩", "Alperen Sengun": "阿尔佩伦·申京",
+  "Jalen Green": "杰伦·格林", "Fred VanVleet": "弗雷德·范弗利特", "Chet Holmgren": "切特·霍姆格伦",
+  "Victor Wembanyama": "维克托·文班亚马", "Bradley Beal": "布拉德利·比尔", "Kristaps Porzingis": "克里斯塔普斯·波尔津吉斯",
+  "Jrue Holiday": "朱·霍勒迪", "Derrick White": "德里克·怀特", "Brook Lopez": "布鲁克·洛佩斯",
+  "Khris Middleton": "克里斯·米德尔顿", "Klay Thompson": "克莱·汤普森", "Draymond Green": "德雷蒙德·格林",
+  "Andrew Wiggins": "安德鲁·威金斯", "Jonathan Kuminga": "乔纳森·库明加", "Jaylen Brown": "杰伦·布朗",
+  "Miles Bridges": "迈尔斯·布里奇斯", "Josh Giddey": "约什·吉迪", "Jalen Williams": "杰伦·威廉姆斯",
+  "Walker Kessler": "沃克·凯斯勒", "Lauri Markkanen": "劳里·马尔卡宁", "Tyler Herro": "泰勒·希罗",
+  "Anfernee Simons": "安芬尼·西蒙斯", "Jerami Grant": "杰拉米·格兰特", "Scoot Henderson": "斯库特·亨德森",
+  "Michael Porter Jr.": "小迈克尔·波特", "Aaron Gordon": "阿隆·戈登", "Jamal Murray": "贾马尔·穆雷",
+  "Darius Garland": "达里厄斯·加兰", "Evan Mobley": "埃文·莫布利", "Jarrett Allen": "贾勒特·艾伦",
+  "Franz Wagner": "弗朗茨·瓦格纳", "Paolo Banchero": "保罗·班凯罗", "Dejounte Murray": "德章泰·穆雷",
+  "D'Angelo Russell": "德安吉洛·拉塞尔", "Austin Reaves": "奥斯汀·里夫斯", "Rui Hachimura": "八村塁",
+  "Ivica Zubac": "伊维察·祖巴茨", "Norman Powell": "诺曼·鲍威尔", "Russell Westbrook": "拉塞尔·威斯布鲁克",
+  "Tobias Harris": "托拜厄斯·哈里斯", "Isaiah Hartenstein": "以赛亚·哈滕斯坦", "Josh Hart": "约什·哈特",
+  "Mitchell Robinson": "米切尔·罗宾逊", "Bojan Bogdanovic": "博扬·波格丹诺维奇", "Kyle Kuzma": "凯尔·库兹马",
+  "Jordan Poole": "乔丹·普尔", "Terry Rozier": "特里·罗齐尔", "Myles Turner": "迈尔斯·特纳",
+  "Clint Capela": "克林特·卡佩拉", "Deandre Ayton": "德安德烈·艾顿", "Jabari Smith Jr.": "小贾巴里·史密斯",
+  "Amen Thompson": "阿门·汤普森", "Tari Eason": "塔里·伊森", "Reed Sheppard": "里德·谢泼德",
+  "Zaccharie Risacher": "扎卡里·里萨谢", "Alex Sarr": "亚历克斯·萨尔", "Stephon Castle": "斯蒂芬·卡斯尔",
+  "Jalen Johnson": "杰伦·约翰逊", "Trey Murphy III": "特雷·墨菲三世", "Herbert Jones": "赫伯特·琼斯",
+  "Keegan Murray": "基根·穆雷", "Benedict Mathurin": "本尼迪克特·马图林", "Andrew Nembhard": "安德鲁·内姆哈德",
+  "Onyeka Okongwu": "奥涅卡·奥孔古", "Jaden Ivey": "贾登·艾维", "Coby White": "科比·怀特",
+  "Cason Wallace": "卡森·华莱士", "Lu Dort": "吕冈茨·多尔特", "Jusuf Nurkic": "尤素夫·努尔基奇",
+  "Jakob Poeltl": "雅各布·珀尔特尔", "Nickeil Alexander-Walker": "尼基尔·亚历山大-沃克", "Naz Reid": "纳兹·里德",
+  "Immanuel Quickley": "伊曼纽尔·奎克利", "RJ Barrett": "RJ·巴雷特", "Malik Monk": "马利克·蒙克",
+  "Harrison Barnes": "哈里森·巴恩斯", "Chris Paul": "克里斯·保罗", "Dereck Lively II": "德里克·莱夫利二世",
+  "P.J. Washington": "PJ·华盛顿", "PJ Washington": "PJ·华盛顿", "Daniel Gafford": "丹尼尔·加福德",
+  "Bobby Portis": "鲍比·波蒂斯", "Marcus Smart": "马库斯·斯马特", "De'Anthony Melton": "德安东尼·梅尔顿"
+};
+
+function getUserMap() { try { return JSON.parse(localStorage.getItem('nets_player_cn') || '{}'); } catch (e) { return {}; } }
+function saveUserMap(m) { try { localStorage.setItem('nets_player_cn', JSON.stringify(m)); } catch (e) {} }
+function getPlayerMap() { return Object.assign({}, PLAYER_CN, getUserMap()); }
+function cnTeam(team) { return (team && TEAM_CN[team.id]) || (team && team.displayName) || ''; }
+function cnPlayer(name) {
+  if (!name) return '';
+  const key = String(name).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return getPlayerMap()[key] || name;
+}
+
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+let _resultDirty = { analyze: false, review: false };
+let _draftPending = { analyze: false, review: false };
+let _calY, _calM;
+
+function getSettings() {
+  return {
+    apiKey: $('apiKey').value.trim(),
+    model: $('model').value,
+    baseUrl: ($('baseUrl').value.trim() || 'https://api.deepseek.com').replace(/\/+$/, ''),
+    account: $('accountName').value.trim() || '账号名称'
+  };
+}
+function saveSettings() {
+  try {
+    localStorage.setItem('nets_api_key', $('apiKey').value.trim());
+    localStorage.setItem('nets_model', $('model').value);
+    localStorage.setItem('nets_base', $('baseUrl').value.trim());
+    localStorage.setItem('nets_account', $('accountName').value.trim());
+  } catch (e) {}
+}
+function loadSettings() {
+  $('apiKey').value = localStorage.getItem('nets_api_key') || '';
+  $('model').value = localStorage.getItem('nets_model') || 'deepseek-chat';
+  $('baseUrl').value = localStorage.getItem('nets_base') || 'https://api.deepseek.com';
+  $('accountName').value = localStorage.getItem('nets_account') || '';
+}
+
+function debounce(fn, ms) { let t; return function(){ clearTimeout(t); t = setTimeout(() => fn.apply(this, arguments), ms); }; }
+
+function showStatus(id, msg, isErr) {
+  const el = $(id);
+  el.textContent = msg;
+  el.className = 'status show ' + (isErr ? 'err' : 'ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'status'; }, 5000);
+}
+function toast(msg, isErr) { showStatus('status1', msg, isErr); }
+function hasUnsaved() {
+  return (_resultDirty.analyze && !!$('resultBody1').innerText.trim())
+      || (_resultDirty.review && !!$('resultBody2').innerText.trim())
+      || _draftPending.analyze || _draftPending.review;
+}
+function updateUnsavedIndicator() {
+  $('unsavedBadge').style.display = hasUnsaved() ? 'flex' : 'none';
+}
+function gotoUnsaved() {
+  if (_resultDirty.analyze && $('resultBody1').innerText.trim()) document.querySelector('.tab[data-tab="analyze"]').click();
+  else if (_resultDirty.review && $('resultBody2').innerText.trim()) document.querySelector('.tab[data-tab="review"]').click();
+  else if (_draftPending.analyze) document.querySelector('.tab[data-tab="analyze"]').click();
+  else if (_draftPending.review) document.querySelector('.tab[data-tab="review"]').click();
+}
+
+function copyToClipboard(text) {
+  if (!text) { toast('没有可复制的内容', true); return; }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => toast('已复制到剪贴板 ✓')).catch(() => fallbackCopy(text));
+  } else fallbackCopy(text);
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('已复制到剪贴板 ✓'); } catch (e) { toast('复制失败，请手动选择复制', true); }
+  document.body.removeChild(ta);
+}
+function copyText(id) { copyToClipboard($(id).value); }
+function copyResult(id) { copyToClipboard($(id).querySelector('.md').innerText); }
+function downloadResult(id) {
+  const text = $(id).querySelector('.md').innerText;
+  if (!text) { toast('没有可下载的内容', true); return; }
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '篮网文案_' + new Date().toISOString().slice(0, 10) + '.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+  _resultDirty[id === 'result1' ? 'analyze' : 'review'] = false; updateUnsavedIndicator();
+}
+
+/* ================= Markdown 渲染 ================= */
+function renderMarkdown(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '', listOpen = false;
+  const bold = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  for (let raw of lines) {
+    const t = raw.trim();
+    if (t === '') { if (listOpen) { html += '</ul>'; listOpen = false; } continue; }
+    const h = t.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { if (listOpen) { html += '</ul>'; listOpen = false; } const lv = Math.min(h[1].length + 2, 6); html += '<h' + lv + '>' + bold(h[2]) + '</h' + lv + '>'; continue; }
+    const cn = t.match(/^([一二三四五六七八九十]+)、\s*(.*)$/);
+    if (cn) { if (listOpen) { html += '</ul>'; listOpen = false; } html += '<div class="sec-head"><span class="sec-num">' + esc(cn[1]) + '、</span><span>' + bold(cn[2]) + '</span></div>'; continue; }
+    const li = t.match(/^[-*•]\s+(.*)$/);
+    const ol = t.match(/^\d+[.、)]\s+(.*)$/);
+    if (li || ol) { if (!listOpen) { html += '<ul>'; listOpen = true; } html += '<li>' + bold(li ? li[1] : ol[1]) + '</li>'; continue; }
+    if (listOpen) { html += '</ul>'; listOpen = false; }
+    html += '<p>' + bold(t) + '</p>';
+  }
+  if (listOpen) html += '</ul>';
+  return html;
+}
+
+/* ================= 提示词构建 ================= */
+function buildSystemPrompt() { return SYSTEM_PROMPT.replace(/\{账号名称\}/g, getSettings().account); }
+function buildUserPrompt() {
+  const a = getSettings().account;
+  return `请根据以下比赛信息，生成一篇篮网队赛后分析短视频口播文案。
+
+【账号名称】：${a}
+
+【比赛信息】
+- 比赛：${$('gOpp').value.trim() || '（请补充）'}
+- 比分/结果：${$('gScore').value.trim() || '（请补充）'}
+- 关键数据与球员表现：${$('gStats').value.trim() || '（无）'}
+- 关键回合/转折点：${$('gTurns').value.trim() || '（无）'}
+- 伤病/交易/其他背景：${$('gOther').value.trim() || '（无）'}
+- 想重点讨论的方向：${$('gFocus').value.trim() || '（未指定）'}
+
+【已核实证据/来源（优先使用）】
+${$('gSources').value.trim() || '（暂无，请提示我补充）'}
+
+请严格按照系统提示中的「输出格式」输出，并遵守事实核查规则：信息不足时不要编造，明确提示我补充资料。`;
+}
+function buildReviewPrompt() {
+  const checked = [...document.querySelectorAll('#panel-review .checklist input:checked')].map(c => c.value);
+  const focus = checked.length ? checked.join('、') : '全面审稿';
+  const script = $('rScript').value.trim();
+  return `请对下面这条口播文案进行审稿并优化。审稿重点：${focus}。
+
+【待审稿文案】
+${script || '（用户未粘贴文案）'}`;
+}
+function copyFullPrompt(mode) {
+  if (mode === 'analyze') copyToClipboard(buildSystemPrompt() + '\n\n---以下是比赛信息---\n\n' + buildUserPrompt());
+  else copyToClipboard(REVIEW_PROMPT + '\n\n---以下是待审稿文案---\n\n' + buildReviewPrompt());
+}
+
+/* ================= ESPN 数据接口 ================= */
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+function isNets(team) {
+  return team && (team.id === NETS_ID || NETS_KEYWORDS.some(k => (team.displayName || '').toLowerCase().includes(k)));
+}
+function quickDate(offset) {
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  $('esDate').value = iso;
+  fetchNetsGame();
+}
+async function fetchNetsGame() {
+  const dateVal = $('esDate').value;
+  if (!dateVal) { showStatus('esStatus', '请先选择日期', true); return; }
+  const ymd = dateVal.replace(/-/g, '');
+  const st = $('esStatus'); st.className = 'status'; const res = $('esResult'); res.classList.remove('show');
+  try {
+    const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${ymd}`);
+    const events = data.events || [];
+    if (!events.length) { showStatus('esStatus', '该日期没有比赛（可能当天无赛程或数据未更新）', true); return; }
+    const ev = events.find(e => { const c = e.competitions && e.competitions[0]; return c && (c.competitors || []).some(x => isNets(x.team)); });
+    if (!ev) { showStatus('esStatus', '该日期没有篮网的比赛', true); return; }
+    renderGame(ev);
+    showStatus('esStatus', '已查到篮网比赛，可点击「拉取详细数据」获取球队命中率', false);
+  } catch (e) {
+    showStatus('esStatus', '拉取 ESPN 失败：' + e.message + '（可能是网络或跨域问题）', true);
+  }
+}
+function renderGame(ev) {
+  const c = ev.competitions[0];
+  const comp = c.competitors;
+  const nets = comp.find(x => isNets(x.team)) || comp[0];
+  const opp = comp.find(x => x !== nets) || comp[1];
+  const statusText = (ev.status && ev.status.type && ev.status.type.shortDetail) || '';
+  const isFinal = /final|end|final\/ot/i.test(statusText) || (ev.status && ev.status.type && /completed|final/i.test(ev.status.type.name || ''));
+  const tag = isFinal ? '<span class="tag final">已结束</span>' : '<span class="tag live">进行中</span>';
+  const matchup = `${cnTeam(nets.team)}  vs  ${cnTeam(opp.team)}`;
+  const score = `${cnTeam(nets.team)} ${nets.score} - ${opp.score} ${cnTeam(opp.team)}`;
+  const leaders = formatLeaders(c.leaders);
+  $('esResult').innerHTML = `
+    <div class="es-match">${esc(matchup)}${tag}</div>
+    <div class="es-score">${esc(score)}</div>
+    ${leaders ? '<div class="es-leaders">' + leaders + '</div>' : ''}
+    <div class="hint">${esc(statusText || '')}</div>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm" onclick="fillFormFromGame()">📥 填入比赛信息</button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchBoxScore('${ev.id}')">📊 拉取详细数据（命中率等）</button>
+    </div>`;
+  $('esResult').classList.add('show');
+  window._curEvent = ev;
+}
+function formatLeaders(leaders) {
+  if (!leaders || !leaders.length) return '';
+  const map = { pointsLeader: '得分王', reboundsLeader: '篮板王', assistsLeader: '助攻王' };
+  const parts = [];
+  for (const L of leaders) {
+    const name = map[L.name]; if (!name) continue;
+    const top = (L.leaders && L.leaders[0]);
+    if (!top || !top.athlete) continue;
+    const tname = top.team ? cnTeam(top.team) : '';
+    parts.push(`${name}：<b>${esc(cnPlayer(top.athlete.displayName))}</b> ${esc(top.displayValue || '')}${tname ? '（' + esc(tname) + '）' : ''}`);
+  }
+  return parts.join('　·　');
+}
+async function fetchBoxScore(eventId) {
+  try {
+    const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`);
+    const box = data.boxscore;
+    if (!box || !box.teams) { showStatus('esStatus', '未取到该场比赛的详细数据', true); return; }
+    let statText = '';
+    for (const t of box.teams) {
+      const nm = cnTeam(t.team);
+      const s = {};
+      (t.statistics || []).forEach(x => { if (x.name) s[x.name] = x.displayValue; });
+      const pct = s.fieldGoalsPct ? s.fieldGoalsPct + '%' : '—';
+      const three = s.threePointFieldGoalsPct ? s.threePointFieldGoalsPct + '%' : '—';
+      const reb = s.totalRebounds ?? '—';
+      const ast = s.assists ?? '—';
+      const tov = s.turnovers ?? '—';
+      statText += `${nm}：投篮命中率 ${pct}｜三分 ${three}｜篮板 ${reb}｜助攻 ${ast}｜失误 ${tov}\n`;
+    }
+    const ev = window._curEvent;
+    if (ev) {
+      const c = ev.competitions[0];
+      const comp = c.competitors;
+      const nets = comp.find(x => isNets(x.team)) || comp[0];
+      const opp = comp.find(x => x !== nets) || comp[1];
+      const oppName = cnTeam(opp.team);
+      const dateCN = (ev.date || '').slice(0, 10);
+      $('gOpp').value = `篮网 vs ${oppName}，${dateCN}`;
+      $('gScore').value = `${cnTeam(nets.team)} ${nets.score} - ${opp.score} ${oppName}`;
+      $('gStats').value = `[ESPN 数据]\n${statText}${formatLeadersPlain(c.leaders)}`;
+      saveDraft('analyze');
+      updateDraftHints();
+    }
+    showStatus('esStatus', '已拉取详细数据并填入表单 ✓', false);
+  } catch (e) {
+    showStatus('esStatus', '拉取详细数据失败：' + e.message, true);
+  }
+}
+function formatLeadersPlain(leaders) {
+  if (!leaders || !leaders.length) return '';
+  const map = { pointsLeader: '得分王', reboundsLeader: '篮板王', assistsLeader: '助攻王' };
+  const parts = [];
+  for (const L of leaders) {
+    const name = map[L.name]; if (!name) continue;
+    const top = (L.leaders && L.leaders[0]);
+    if (!top || !top.athlete) continue;
+    const tname = top.team ? cnTeam(top.team) : '';
+    parts.push(`${name}：${cnPlayer(top.athlete.displayName)} ${top.displayValue || ''}${tname ? '（' + tname + '）' : ''}`);
+  }
+  return parts.length ? '\n' + parts.join('；') : '';
+}
+function fillFormFromGame() {
+  const ev = window._curEvent;
+  if (!ev) return;
+  const c = ev.competitions[0];
+  const comp = c.competitors;
+  const nets = comp.find(x => isNets(x.team)) || comp[0];
+  const opp = comp.find(x => x !== nets) || comp[1];
+  const dateCN = (ev.date || '').slice(0, 10);
+  $('gOpp').value = `篮网 vs ${cnTeam(opp.team)}，${dateCN}`;
+  $('gScore').value = `${cnTeam(nets.team)} ${nets.score} - ${opp.score} ${cnTeam(opp.team)}`;
+  $('gStats').value = `[ESPN 数据] ${formatLeadersPlain(c.leaders).replace(/^\n/, '')}`;
+  $('gSources').value = `ESPN 官网数据（比赛ID ${ev.id}）：https://www.espn.com/nba/game/_/gameId/${ev.id}`;
+  saveDraft('analyze'); updateDraftHints();
+  toast('已填入表单，可继续补充回合/伤病等信息');
+}
+function deepLink(site) {
+  const q = ['布鲁克林篮网', $('gOpp').value.trim(), $('gScore').value.trim(), $('esDate').value.trim()].filter(Boolean).join(' ');
+  const enc = encodeURIComponent(q);
+  let url;
+  if (site === 'hupu') url = `https://bbs.hupu.com/search?q=${enc}`;
+  else if (site === 'tencent') url = `https://sports.qq.com/nba/`;
+  else url = `https://www.espn.com/nba/team/_/name/bkn/brooklyn-nets`;
+  window.open(url, '_blank');
+}
+
+/* ================= ESPN 战绩与排名 ================= */
+async function fetchStandings() {
+  const st = $('standStatus'); st.className = 'status';
+  try {
+    const data = await fetchJson('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings');
+    window._standings = data;
+    renderStandings(data);
+  } catch (e) {
+    showStatus('standStatus', '拉取排名失败：' + e.message + '（可能是网络或跨域问题）', true);
+  }
+}
+function cnConf(name) { return /east/i.test(name || '') ? '东部联盟' : '西部联盟'; }
+function formatStreak(s) {
+  if (!s) return '—';
+  const m = String(s).match(/([WL])\s*(\d+)/i);
+  if (!m) return s;
+  return m[1].toUpperCase() === 'W' ? m[2] + '连胜' : m[2] + '连败';
+}
+function parseEntry(e) {
+  const s = {};
+  (e.stats || []).forEach(x => { if (x.name) s[x.name] = x.displayValue; });
+  let winPct = s.winPercent || s.winningPercentage || '';
+  if (!winPct && s.wins != null && s.losses != null) {
+    const w = parseInt(s.wins), l = parseInt(s.losses);
+    if (w + l > 0) winPct = (w / (w + l)).toFixed(3);
+  }
+  return {
+    id: (e.team && e.team.id) || '',
+    name: e.team ? cnTeam(e.team) : '',
+    wins: s.wins != null ? s.wins : '-',
+    losses: s.losses != null ? s.losses : '-',
+    winPct: winPct || '-',
+    gb: s.gamesBehind != null ? s.gamesBehind : '-',
+    seed: s.playoffSeed ? parseInt(s.playoffSeed) : null,
+    streak: s.streak || ''
+  };
+}
+function renderStandings(data) {
+  const children = data.children || [];
+  let netsInfo = null, tablesHtml = '';
+  for (const conf of children) {
+    const entries = (conf.standings && conf.standings.entries) || [];
+    const rows = entries.map(parseEntry).sort((a, b) => (a.seed || 99) - (b.seed || 99));
+    const rowsHtml = rows.map(r => {
+      const isNets = r.id === NETS_ID;
+      return `<tr class="${isNets ? 'nets-row' : ''}"><td>${r.seed || '-'}</td><td>${esc(r.name)}</td><td>${r.wins}</td><td>${r.losses}</td><td>${esc(r.winPct)}</td><td>${esc(r.gb)}</td></tr>`;
+    }).join('');
+    tablesHtml += `<h3 style="margin:12px 0 8px;font-size:15px;color:#ffb347">${cnConf(conf.name)}</h3>
+      <table class="data-table"><thead><tr><th>排名</th><th>球队</th><th>胜</th><th>负</th><th>胜率</th><th>落后</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>`;
+    const netsRow = rows.find(r => r.id === NETS_ID);
+    if (netsRow) netsInfo = Object.assign({ conf: cnConf(conf.name) }, netsRow);
+  }
+  let summary = '';
+  if (netsInfo) {
+    summary = `<div class="es-match">布鲁克林篮网 · ${esc(netsInfo.conf)}</div>
+      <div class="es-score">${netsInfo.wins} 胜 ${netsInfo.losses} 负 <small style="font-size:13px;color:var(--muted)">胜率 ${esc(netsInfo.winPct)}</small></div>
+      <div class="es-leaders">排名：<b>${netsInfo.seed || '?'} 名</b>　·　落后榜首 <b>${esc(netsInfo.gb)}</b> 场　·　近期 <b>${formatStreak(netsInfo.streak)}</b></div>
+      <button class="btn btn-ghost btn-sm" onclick="fillStandingsToForm()">📥 填入「其他背景」</button>`;
+  } else {
+    summary = '<div class="hint">未在排名中找到篮网，可能数据尚未更新。</div>';
+  }
+  $('standSummary').innerHTML = summary;
+  $('standSummary').classList.add('show');
+  $('standTable').innerHTML = tablesHtml;
+  $('standTable').classList.add('show');
+  showStatus('standStatus', '战绩与排名已更新 ✓', false);
+}
+function toggleStandingsTable() { $('standTable').classList.toggle('show'); }
+function fillStandingsToForm() {
+  const data = window._standings;
+  if (!data) { toast('请先查询排名', true); return; }
+  const children = data.children || [];
+  for (const conf of children) {
+    const entries = (conf.standings && conf.standings.entries) || [];
+    const e = entries.find(x => x.team && x.team.id === NETS_ID);
+    if (e) {
+      const r = parseEntry(e);
+      const add = `篮网当前排名：${cnConf(conf.name)}第${r.seed || '?'}名，战绩 ${r.wins}胜${r.losses}负（胜率 ${r.winPct}），近期 ${formatStreak(r.streak)}`;
+      const cur = $('gOther').value.trim();
+      $('gOther').value = cur ? cur + '\n' + add : add;
+      saveDraft('analyze'); updateDraftHints();
+      toast('已把战绩与排名填入「其他背景」');
+      return;
+    }
+  }
+  toast('未找到篮网数据', true);
+}
+
+/* ================= ESPN 篮网赛程日历 ================= */
+async function fetchSchedule() {
+  const st = $('schedStatus'); st.className = 'status';
+  const season = $('seasonSel').value;
+  const q = season ? '?season=' + season : '';
+  try {
+    const data = await fetchJson('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/' + NETS_ID + '/schedule' + q);
+    window._schedule = data;
+    window._games = parseSchedule(data);
+    if (window._games.length) {
+      const first = new Date(window._games[0].dateStr + 'T00:00:00');
+      _calY = first.getFullYear(); _calM = first.getMonth();
+    } else {
+      const t = new Date(); _calY = t.getFullYear(); _calM = t.getMonth();
+    }
+    const fin = window._games.filter(g => g.completed);
+    const wins = fin.filter(g => g.win).length;
+    $('calSummary').textContent = '本赛季已赛 ' + fin.length + ' 场：' + wins + ' 胜 ' + (fin.length - wins) + ' 负';
+    renderCalendar();
+  } catch (e) {
+    showStatus('schedStatus', '拉取赛程失败：' + e.message + '（可能是网络或跨域问题）', true);
+  }
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function parseSchedule(data) {
+  const games = [];
+  const events = data.events || [];
+  for (const ev of events) {
+    const comp = ev.competitions && ev.competitions[0];
+    if (!comp) continue;
+    const comps = comp.competitors || [];
+    const nets = comps.find(x => isNets(x.team));
+    const opp = comps.find(x => !isNets(x.team));
+    if (!nets || !opp) continue;
+    const dateStr = (comp.date || ev.date || '').slice(0, 10);
+    const completed = !!(comp.status && comp.status.type && comp.status.type.completed);
+    games.push({
+      id: ev.id, dateStr, ev, comp, nets, opp,
+      oppName: cnTeam(opp.team),
+      loc: nets.homeAway === 'home' ? '主场' : '客场',
+      completed,
+      win: completed ? (nets.winner === true) : null,
+      score: completed ? (cnTeam(nets.team) + ' ' + nets.score + '-' + opp.score + ' ' + cnTeam(opp.team)) : '',
+      time: (!completed && comp.status && comp.status.type && comp.status.type.shortDetail) || '未开赛'
+    });
+  }
+  games.sort((a, b) => a.dateStr < b.dateStr ? -1 : 1);
+  return games;
+}
+function renderCalendar() {
+  const games = window._games || [];
+  const byDay = {};
+  games.forEach(g => { byDay[g.dateStr] = g; });
+  const year = _calY, month = _calM;
+  const startOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  $('calLabel').textContent = year + ' 年 ' + (month + 1) + ' 月';
+  let html = '<div class="cal-dow">一</div><div class="cal-dow">二</div><div class="cal-dow">三</div><div class="cal-dow">四</div><div class="cal-dow">五</div><div class="cal-dow">六</div><div class="cal-dow">日</div>';
+  for (let i = 0; i < startOffset; i++) html += '<div class="cal-cell other"></div>';
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = year + '-' + pad2(month + 1) + '-' + pad2(d);
+    const g = byDay[dateStr];
+    let chip = '';
+    if (g) {
+      let cls, title;
+      if (g.completed) {
+        cls = g.win ? 'cal-game win' : 'cal-game loss';
+        title = (month + 1) + '月' + d + '日 ' + g.loc + ' vs ' + g.oppName + ' ' + g.score + (g.win ? ' 胜' : ' 负');
+      } else {
+        cls = 'cal-game upcoming';
+        title = (month + 1) + '月' + d + '日 ' + g.loc + ' vs ' + g.oppName + ' · ' + g.time;
+      }
+      chip = '<div class="' + cls + '" title="' + esc(title) + '" onclick="pickGame(\'' + g.id + '\',' + g.completed + ')">' + esc(g.oppName) + '</div>';
+    }
+    html += '<div class="cal-cell' + (dateStr === todayStr ? ' today' : '') + '"><div class="cal-date">' + d + '</div>' + chip + '</div>';
+  }
+  $('calGrid').innerHTML = html;
+  $('schedResult').classList.add('show');
+}
+function calShift(delta) {
+  if (!window._games) { toast('请先查询赛程', true); return; }
+  if (delta === 0) { const t = new Date(); _calY = t.getFullYear(); _calM = t.getMonth(); }
+  else {
+    _calM += delta;
+    if (_calM < 0) { _calM = 11; _calY--; }
+    if (_calM > 11) { _calM = 0; _calY++; }
+  }
+  renderCalendar();
+}
+function pickGame(eventId, completed) {
+  const events = (window._schedule && window._schedule.events) || [];
+  const ev = events.find(e => e.id === eventId);
+  if (!ev) return;
+  const comp = ev.competitions[0];
+  const comps = comp.competitors || [];
+  const nets = comps.find(x => isNets(x.team));
+  const opp = comps.find(x => !isNets(x.team));
+  const dateCN = (comp.date || ev.date || '').slice(0, 10);
+  if (completed) {
+    window._curEvent = ev;
+    fetchBoxScore(eventId);
+  } else {
+    $('gOpp').value = '篮网 vs ' + cnTeam(opp.team) + '，' + dateCN;
+    $('gScore').value = '';
+    $('gStats').value = '';
+    $('gTurns').value = '';
+    saveDraft('analyze'); updateDraftHints();
+    toast('已填入未开赛比赛，可自行补充预测方向');
+  }
+}
+
+/* ================= 球员译名编辑 ================= */
+function addPlayer() {
+  const en = $('pEn').value.trim();
+  const cn = $('pCn').value.trim();
+  if (!en) { toast('请输入英文名', true); return; }
+  const key = en.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const userMap = getUserMap();
+  if (!cn) delete userMap[key]; else userMap[key] = cn;
+  saveUserMap(userMap);
+  $('pEn').value = ''; $('pCn').value = '';
+  renderPlayerEditor($('pSearch').value);
+  toast(cn ? '已添加/覆盖：' + key + ' → ' + cn : '已删除：' + key);
+}
+function editPlayerCn(key, value) {
+  const userMap = getUserMap();
+  if (value.trim()) userMap[key] = value.trim(); else delete userMap[key];
+  saveUserMap(userMap);
+  toast('已保存 ' + key + ' → ' + (value.trim() || '（恢复默认）'));
+}
+function deletePlayer(key) {
+  const userMap = getUserMap();
+  delete userMap[key];
+  saveUserMap(userMap);
+  renderPlayerEditor($('pSearch').value);
+  toast(PLAYER_CN.hasOwnProperty(key) ? '已重置为默认：' + key : '已删除：' + key);
+}
+function resetPlayers() {
+  if (!confirm('确定恢复全部默认译名吗？（会清空你的所有修改）')) return;
+  localStorage.removeItem('nets_player_cn');
+  renderPlayerEditor('');
+  toast('已恢复全部默认译名');
+}
+function exportPlayers() {
+  const blob = new Blob([JSON.stringify(getPlayerMap(), null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '球员译名_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function renderPlayerEditor(filter) {
+  const map = getPlayerMap();
+  const userMap = getUserMap();
+  const keys = Object.keys(map).sort();
+  const f = (filter || '').trim().toLowerCase();
+  let rows = '', count = 0;
+  for (const k of keys) {
+    const v = map[k];
+    if (f && !(k.toLowerCase().indexOf(f) >= 0 || String(v).toLowerCase().indexOf(f) >= 0)) continue;
+    count++;
+    const isBuiltin = PLAYER_CN.hasOwnProperty(k);
+    const isOverridden = isBuiltin && userMap.hasOwnProperty(k);
+    const badge = !isBuiltin ? '<span class="tag" style="margin-left:6px">新增</span>' : (isOverridden ? '<span class="tag" style="margin-left:6px">已改</span>' : '');
+    const delBtn = isBuiltin ? (isOverridden ? '<button class="btn btn-ghost btn-sm" data-act="del" data-key="' + esc(k) + '">重置</button>' : '') : '<button class="btn btn-ghost btn-sm" data-act="del" data-key="' + esc(k) + '">删除</button>';
+    rows += '<div class="player-row"><div class="player-en">' + esc(k) + badge + '</div>'
+      + '<input class="player-cn" value="' + esc(v) + '" data-key="' + esc(k) + '" data-act="edit" placeholder="中文名">'
+      + delBtn + '</div>';
+  }
+  $('playerList').innerHTML = rows || '<div class="empty">没有匹配的条目</div>';
+  $('playerCount').textContent = '共 ' + count + ' 条';
+}
+
+/* ================= API 流式调用 ================= */
+let controller = null;
+async function streamChat(messages, temp, maxTokens, onChunk, onDone) {
+  const { apiKey, model, baseUrl } = getSettings();
+  if (!apiKey) throw new Error('请先在顶部填写 DeepSeek API Key');
+  controller = new AbortController();
+  let res;
+  try {
+    res = await fetch(baseUrl + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      signal: controller.signal,
+      body: JSON.stringify({ model, messages, stream: true, temperature: temp, max_tokens: maxTokens })
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    throw new Error('网络请求失败（常见原因是浏览器跨域 CORS 拦截，或未联网）。请检查：① 是否已联网；② 在顶部「接口地址」填一个可用的代理地址。原始错误：' + e.message);
+  }
+  if (!res.ok) {
+    let detail = '';
+    try { detail = await res.text(); } catch (e) {}
+    if (res.status === 401) throw new Error('API Key 无效或已过期（401），请检查 Key 是否正确');
+    if (res.status === 402) throw new Error('账户余额不足（402），请到 DeepSeek 平台充值');
+    if (res.status === 429) throw new Error('请求过于频繁或额度受限（429），请稍后再试');
+    if (res.status === 404) throw new Error('接口地址或模型名错误（404），请检查「接口地址」和「模型」设置');
+    throw new Error('接口返回 ' + res.status + (detail ? '：' + detail.slice(0, 300) : '（请检查 Key / 接口地址 / 网络）'));
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', content = '', errMsg = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const data = t.slice(5).trim();
+      if (data === '[DONE]') break;
+      try {
+        const json = JSON.parse(data);
+        if (json.error) { errMsg = json.error.message || JSON.stringify(json.error); break; }
+        const delta = json.choices && json.choices[0] && json.choices[0].delta;
+        if (delta && delta.content) { content += delta.content; if (onChunk) onChunk(delta.content); }
+      } catch (e) {}
+    }
+    if (errMsg) break;
+  }
+  if (errMsg) throw new Error('接口报错：' + errMsg.slice(0, 200));
+
+  // 流式没拿到正文 → 回退到非流式请求（兼容代理 / 推理模型）
+  if (!content.trim()) {
+    controller = new AbortController();
+    let res2;
+    try {
+      res2 = await fetch(baseUrl + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        signal: controller.signal,
+        body: JSON.stringify({ model, messages, stream: false, temperature: temp, max_tokens: maxTokens })
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      throw new Error('回退请求网络失败：' + e.message);
+    }
+    if (!res2.ok) throw new Error('回退请求接口返回 ' + res2.status);
+    const j = await res2.json();
+    const msg = j.choices && j.choices[0] && j.choices[0].message;
+    if (msg && msg.content) { content = msg.content; if (onChunk) onChunk(msg.content); }
+  }
+
+  onDone && onDone();
+  if (!content.trim()) throw new Error('模型未返回正文内容：请确认「模型」设置正确（deepseek-reasoner 会较慢，请耐心等待）或稍后重试');
+  return content;
+}
+function stopGen() {
+  if (controller) { controller.abort(); controller = null; }
+  $('btnStop').style.display = 'none';
+  $('btnStop2').style.display = 'none';
+}
+
+/* ================= 比赛分析 ================= */
+async function generateAnalysis() {
+  const btn = $('btnGen'), loading = $('loading1'), result = $('result1'), body = $('resultBody1');
+  result.classList.add('show'); body.innerHTML = '';
+  btn.disabled = true; loading.classList.add('show'); $('btnStop').style.display = 'inline-flex';
+  $('loadingText1').textContent = '正在分析比赛并生成文案…';
+  let full = '';
+  try {
+    await streamChat(
+      [{ role: 'system', content: buildSystemPrompt() }, { role: 'user', content: buildUserPrompt() }],
+      0.8, 4000,
+      chunk => { full += chunk; body.innerHTML = renderMarkdown(full); },
+      () => { $('loadingText1').textContent = '生成完成 ✓'; }
+    );
+    if (!full.trim()) throw new Error('模型没有返回内容');
+    body.innerHTML = renderMarkdown(full);
+    _resultDirty.analyze = true; updateUnsavedIndicator();
+    showStatus('status1', '生成完成，请对照「事实核查清单」二次确认后再发布', false);
+  } catch (e) {
+    if (e.name === 'AbortError') showStatus('status1', '已停止生成', false);
+    else showStatus('status1', '生成失败：' + e.message, true);
+  } finally {
+    btn.disabled = false; loading.classList.remove('show'); $('btnStop').style.display = 'none';
+  }
+}
+
+/* ================= 文案审稿 ================= */
+async function reviewScript() {
+  if (!$('rScript').value.trim()) { showStatus('status2', '请先粘贴需要审稿的文案', true); return; }
+  const btn = $('btnRev'), loading = $('loading2'), result = $('result2'), body = $('resultBody2');
+  result.classList.add('show'); body.innerHTML = '';
+  btn.disabled = true; loading.classList.add('show'); $('btnStop2').style.display = 'inline-flex';
+  $('loadingText2').textContent = '正在审稿…';
+  let full = '';
+  try {
+    await streamChat(
+      [{ role: 'system', content: REVIEW_PROMPT }, { role: 'user', content: buildReviewPrompt() }],
+      0.5, 4000,
+      chunk => { full += chunk; body.innerHTML = renderMarkdown(full); },
+      () => { $('loadingText2').textContent = '审稿完成 ✓'; }
+    );
+    if (!full.trim()) throw new Error('模型没有返回内容');
+    body.innerHTML = renderMarkdown(full);
+    _resultDirty.review = true; updateUnsavedIndicator();
+    showStatus('status2', '审稿完成', false);
+  } catch (e) {
+    if (e.name === 'AbortError') showStatus('status2', '已停止', false);
+    else showStatus('status2', '审稿失败：' + e.message, true);
+  } finally {
+    btn.disabled = false; loading.classList.remove('show'); $('btnStop2').style.display = 'none';
+  }
+}
+
+/* ================= 草稿 ================= */
+function getAnalyzeDraft() {
+  return {
+    gOpp: $('gOpp').value, gScore: $('gScore').value, gStats: $('gStats').value,
+    gTurns: $('gTurns').value, gOther: $('gOther').value, gFocus: $('gFocus').value, gSources: $('gSources').value
+  };
+}
+function setAnalyzeDraft(d) {
+  $('gOpp').value = d.gOpp || ''; $('gScore').value = d.gScore || ''; $('gStats').value = d.gStats || '';
+  $('gTurns').value = d.gTurns || ''; $('gOther').value = d.gOther || ''; $('gFocus').value = d.gFocus || ''; $('gSources').value = d.gSources || '';
+}
+function saveDraft(mode) {
+  try {
+    if (mode === 'analyze') localStorage.setItem('nets_draft_analyze', JSON.stringify(getAnalyzeDraft()));
+    else localStorage.setItem('nets_draft_review', JSON.stringify({ rScript: $('rScript').value }));
+    _draftPending[mode] = false; updateUnsavedIndicator();
+    updateDraftHints();
+  } catch (e) {}
+}
+function restoreDraft(mode) {
+  try {
+    if (mode === 'analyze') {
+      const d = JSON.parse(localStorage.getItem('nets_draft_analyze') || 'null');
+      if (d) { setAnalyzeDraft(d); toast('已恢复「比赛分析」草稿'); }
+      else toast('没有「比赛分析」草稿', true);
+    } else {
+      const d = JSON.parse(localStorage.getItem('nets_draft_review') || 'null');
+      if (d && d.rScript) { $('rScript').value = d.rScript; toast('已恢复「审稿」草稿'); }
+      else toast('没有「审稿」草稿', true);
+    }
+  } catch (e) { toast('恢复失败', true); }
+}
+function clearDrafts() {
+  localStorage.removeItem('nets_draft_analyze'); localStorage.removeItem('nets_draft_review');
+  updateDraftHints(); toast('已清空草稿');
+}
+function updateDraftHints() {
+  const t1 = $('draftHint1'), t2 = $('draftHint2');
+  const a = localStorage.getItem('nets_draft_analyze');
+  const r = localStorage.getItem('nets_draft_review');
+  t1.textContent = a ? '✅ 已有草稿（自动实时保存，随时可恢复）' : '';
+  t2.textContent = r ? '✅ 已有草稿（自动实时保存，随时可恢复）' : '';
+}
+
+/* ================= 历史记录 ================= */
+function getHistory() { try { return JSON.parse(localStorage.getItem('nets_history') || '[]'); } catch (e) { return []; } }
+function setHistory(h) { try { localStorage.setItem('nets_history', JSON.stringify(h.slice(0, 40))); } catch (e) {} }
+
+function saveCurrent(type) {
+  let output = '', inputs = null, title = '';
+  if (type === 'analyze') {
+    output = $('resultBody1').innerText;
+    inputs = getAnalyzeDraft();
+    title = $('gOpp').value.trim() || '未命名比赛';
+  } else {
+    output = $('resultBody2').innerText;
+    inputs = { rScript: $('rScript').value };
+    title = '文案审稿';
+  }
+  if (!output.trim()) { toast('还没有生成结果，无法保存', true); return; }
+  const item = {
+    id: Date.now(),
+    type,
+    date: new Date().toISOString(),
+    title: title.slice(0, 40),
+    preview: output.replace(/\s+/g, ' ').slice(0, 60),
+    inputs,
+    output
+  };
+  const h = getHistory();
+  h.unshift(item);
+  setHistory(h);
+  renderHistory();
+  _resultDirty[type] = false; updateUnsavedIndicator();
+  toast('已保存到历史记录 ✓');
+}
+function renderHistory() {
+  const list = $('histList');
+  const h = getHistory();
+  if (!h.length) { list.innerHTML = '<div class="empty">暂无历史记录。生成文案或审稿后点「💾 存历史」即可保存。</div>'; return; }
+  list.innerHTML = h.map(it => {
+    const icon = it.type === 'analyze' ? '🏀' : '📝';
+    const typeName = it.type === 'analyze' ? '比赛分析' : '文案审稿';
+    const d = it.date ? new Date(it.date).toLocaleString('zh-CN', { hour12: false }) : '';
+    return `<div class="hist-item">
+      <div class="hist-type ${it.type}">${icon}</div>
+      <div class="hist-main">
+        <div class="hist-title">${esc(it.title)}</div>
+        <div class="hist-meta">${typeName} · ${esc(d)} · ${esc(it.preview || '')}</div>
+      </div>
+      <div class="hist-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewHistory(${it.id})">查看</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistoryInputs(${it.id})">载入输入</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteHistory(${it.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function viewHistory(id) {
+  const it = getHistory().find(x => x.id === id);
+  if (!it) return;
+  $('modalTitle').textContent = it.title + '（' + (it.type === 'analyze' ? '比赛分析' : '文案审稿') + '）';
+  $('modalBody').innerHTML = renderMarkdown(it.output);
+  $('modal').classList.add('show');
+}
+function closeModal() { $('modal').classList.remove('show'); }
+function loadHistoryInputs(id) {
+  const it = getHistory().find(x => x.id === id);
+  if (!it) return;
+  if (it.type === 'analyze') { setAnalyzeDraft(it.inputs || {}); saveDraft('analyze'); toast('已载入该场比赛的输入，可去「比赛分析」重新生成'); }
+  else { $('rScript').value = (it.inputs && it.inputs.rScript) || ''; saveDraft('review'); toast('已载入该文案，可去「审稿」重新审'); }
+  document.querySelector('.tab[data-tab="' + it.type + '"]').click();
+}
+function deleteHistory(id) { setHistory(getHistory().filter(x => x.id !== id)); renderHistory(); toast('已删除'); }
+function clearHistory() { if (confirm('确定清空全部历史记录吗？')) { setHistory([]); renderHistory(); toast('已清空历史'); } }
+function exportHistory() {
+  const h = getHistory();
+  if (!h.length) { toast('没有历史记录可导出', true); return; }
+  const blob = new Blob([JSON.stringify(h, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '篮网助手历史_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ================= Tab ================= */
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('panel-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'history') renderHistory();
+    if (t.dataset.tab === 'players') renderPlayerEditor($('pSearch').value || '');
+  });
+});
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+$('playerList').addEventListener('change', e => { const el = e.target; if (el.dataset.act === 'edit') editPlayerCn(el.dataset.key, el.value); });
+$('playerList').addEventListener('click', e => { const el = e.target.closest('button[data-act="del"]'); if (el) deletePlayer(el.dataset.key); });
+window.addEventListener('beforeunload', e => { if (hasUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ================= 初始化 ================= */
+function init() {
+  loadSettings();
+  $('pSystem').value = SYSTEM_PROMPT;
+  $('pTemplate').value = INPUT_TEMPLATE;
+  // 设置自动保存
+  ['apiKey', 'model', 'baseUrl', 'accountName'].forEach(id => $(id).addEventListener('input', saveSettings));
+  // 草稿自动保存
+  ['gOpp','gScore','gStats','gTurns','gOther','gFocus','gSources'].forEach(id => $(id).addEventListener('input', debounce(() => saveDraft('analyze'), 500)));
+  $('rScript').addEventListener('input', debounce(() => saveDraft('review'), 500));
+  ['gOpp','gScore','gStats','gTurns','gOther','gFocus','gSources'].forEach(id => $(id).addEventListener('input', () => { _draftPending.analyze = true; updateUnsavedIndicator(); }));
+  $('rScript').addEventListener('input', () => { _draftPending.review = true; updateUnsavedIndicator(); });
+  // 恢复草稿（启动时静默恢复）
+  try {
+    const a = JSON.parse(localStorage.getItem('nets_draft_analyze') || 'null');
+    if (a) setAnalyzeDraft(a);
+    const r = JSON.parse(localStorage.getItem('nets_draft_review') || 'null');
+    if (r && r.rScript) $('rScript').value = r.rScript;
+  } catch (e) {}
+  updateDraftHints();
+  renderHistory();
+  // 默认日期
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  $('esDate').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+init();
+</script>
+</body>
+</html>
