@@ -545,7 +545,7 @@
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="copyText('pSystem')">📋 复制系统提示词</button>
         <button class="btn btn-ghost" id="sysEditBtn" onclick="editSystemPrompt()">✏️ 编辑</button>
-        <button class="btn btn-primary" id="sysSaveBtn" onclick="saveSystemPrompt()" style="display:none">💾 保存</button>
+        <button class="btn btn-primary" onclick="saveSystemPrompt()">💾 保存</button>
         <button class="btn btn-ghost" id="sysCancelBtn" onclick="cancelSystemPrompt()" style="display:none">↩️ 取消</button>
         <button class="btn btn-ghost" onclick="resetSystemPrompt()">↺ 恢复默认</button>
       </div>
@@ -904,7 +904,6 @@ function editSystemPrompt() {
   $('pSystem').style.borderColor = 'var(--orange)';
   $('pSystem').focus();
   $('sysEditBtn').style.display = 'none';
-  $('sysSaveBtn').style.display = 'inline-flex';
   $('sysCancelBtn').style.display = 'inline-flex';
 }
 function saveSystemPrompt() {
@@ -912,7 +911,6 @@ function saveSystemPrompt() {
   $('pSystem').setAttribute('readonly', 'readonly');
   $('pSystem').style.borderColor = '';
   $('sysEditBtn').style.display = 'inline-flex';
-  $('sysSaveBtn').style.display = 'none';
   $('sysCancelBtn').style.display = 'none';
   toast('系统提示词已保存，之后生成文案将使用新版本');
 }
@@ -921,7 +919,6 @@ function cancelSystemPrompt() {
   $('pSystem').setAttribute('readonly', 'readonly');
   $('pSystem').style.borderColor = '';
   $('sysEditBtn').style.display = 'inline-flex';
-  $('sysSaveBtn').style.display = 'none';
   $('sysCancelBtn').style.display = 'none';
   toast('已取消编辑');
 }
@@ -932,7 +929,6 @@ function resetSystemPrompt() {
   $('pSystem').setAttribute('readonly', 'readonly');
   $('pSystem').style.borderColor = '';
   $('sysEditBtn').style.display = 'inline-flex';
-  $('sysSaveBtn').style.display = 'none';
   $('sysCancelBtn').style.display = 'none';
   toast('已恢复默认系统提示词');
 }
