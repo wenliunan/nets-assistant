@@ -348,9 +348,10 @@
       <div class="hint">真实调用 ESPN 公开接口拉取篮网比赛：比分、得分/篮板/助攻王、球队命中率。查证后再「填入表单」。</div>
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="deepLink('hupu')">🐯 虎扑核对</button>
-        <button class="btn btn-ghost btn-sm" onclick="deepLink('tencent')">🐧 腾讯体育</button>
-        <button class="btn btn-ghost btn-sm" onclick="deepLink('espn')">🇺🇸 ESPN 官网</button>
+        <button class="btn btn-ghost btn-sm" onclick="deepLink('tencent')">🐧 腾讯体育核对</button>
+        <button class="btn btn-ghost btn-sm" onclick="deepLink('espn')">🇺🇸 ESPN 比赛页</button>
       </div>
+      <div class="hint">点上面按钮会带上当前「对手 + 日期」跳转核对：虎扑走站内搜索、腾讯走百度搜索、ESPN 直接打开对应比赛页。</div>
       <div class="es-result" id="esResult"></div>
       <div class="status" id="esStatus"></div>
     </div>
@@ -1075,13 +1076,38 @@ function fillFormFromGame() {
   saveDraft('analyze'); updateDraftHints();
   toast('已填入表单，可继续补充回合/伤病等信息');
 }
+function gameQuery() {
+  // 从表单提取对手 + 日期，构建精准查询词
+  let opp = '', date = $('esDate').value.trim();
+  const g = $('gOpp').value.trim();
+  if (g) {
+    const m = g.match(/vs\s*([^，,]+)/i);
+    if (m) opp = m[1].trim();
+    const dm = g.match(/(\d{4}-\d{2}-\d{2})/);
+    if (dm) date = dm[1];
+  }
+  if (!opp) {
+    const sm = $('gScore').value.trim().match(/\d+\s*-\s*\d+\s*(.+)$/);
+    if (sm) opp = sm[1].trim();
+  }
+  const parts = ['篮网'];
+  if (opp) parts.push(opp);
+  if (date) parts.push(date);
+  parts.push('比分');
+  return parts.join(' ');
+}
 function deepLink(site) {
-  const q = ['布鲁克林篮网', $('gOpp').value.trim(), $('gScore').value.trim(), $('esDate').value.trim()].filter(Boolean).join(' ');
-  const enc = encodeURIComponent(q);
+  const q = gameQuery();
   let url;
-  if (site === 'hupu') url = `https://bbs.hupu.com/search?q=${enc}`;
-  else if (site === 'tencent') url = `https://sports.qq.com/nba/`;
-  else url = `https://www.espn.com/nba/team/_/name/bkn/brooklyn-nets`;
+  if (site === 'hupu') {
+    url = 'https://bbs.hupu.com/search?q=' + encodeURIComponent(q);
+  } else if (site === 'tencent') {
+    url = 'https://www.baidu.com/s?wd=' + encodeURIComponent(q + ' 腾讯体育');
+  } else {
+    url = (window._curEvent && window._curEvent.id)
+      ? 'https://www.espn.com/nba/game/_/gameId/' + window._curEvent.id
+      : 'https://www.espn.com/nba/team/_/name/bkn/brooklyn-nets';
+  }
   window.open(url, '_blank');
 }
 
