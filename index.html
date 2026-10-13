@@ -960,17 +960,21 @@ async function fetchNetsGame() {
   const ymdPrev = shiftDateStr(ymd, -1);
   const st = $('esStatus'); st.className = 'status'; const res = $('esResult'); res.classList.remove('show');
   try {
-    const data = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${ymdPrev}-${ymd}`);
-    const events = data.events || [];
+    // 北京时间可能比美东日期晚一天；ESPN 不支持日期范围，故分别查当天和前一天
+    let events = [];
+    for (const d of [ymd, ymdPrev]) {
+      const data = await fetchJson('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=' + d);
+      events = events.concat(data.events || []);
+    }
     const netsGames = events.filter(e => { const c = e.competitions && e.competitions[0]; return c && (c.competitors || []).some(x => isNets(x.team)); });
-    if (!netsGames.length) { showStatus('esStatus', '该日期（北京时间）没有篮网的比赛', true); return; }
-    // 优先选北京时间 = 所选日期的比赛（NBA 在美国，北京时间可能比美东日期晚一天）
+    if (!netsGames.length) { showStatus('esStatus', '该日期（北京时间）没有篮网的比赛，可点下方「虎扑核对 / 腾讯体育核对」手动查证', true); return; }
+    // 优先选北京时间 = 所选日期的比赛
     let ev = netsGames.find(e => { const c = e.competitions[0]; return bjDateStr(c.date || e.date) === dateVal; });
     if (!ev) ev = netsGames[0];
     renderGame(ev);
     showStatus('esStatus', '已查到篮网比赛（按北京时间），可点击「拉取详细数据」获取球队命中率', false);
   } catch (e) {
-    showStatus('esStatus', '拉取 ESPN 失败：' + e.message + '（可能是网络或跨域问题）', true);
+    showStatus('esStatus', '拉取 ESPN 失败：' + e.message + '。可点下方「虎扑核对 / 腾讯体育核对」手动查证', true);
   }
 }
 function renderGame(ev) {
