@@ -320,6 +320,11 @@
         <div class="hint">⚠️ 若浏览器报跨域(CORS)错误，请在接口地址填你的代理地址。ESPN 数据接口已内置、无需任何 Key。</div>
       </div>
     </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="exportConfig()">⬇ 导出配置</button>
+      <button class="btn btn-ghost btn-sm" onclick="importConfig()">⬆ 导入配置</button>
+      <span class="hint" style="margin:auto 0">用于在电脑/手机间同步：提示词、API Key、球员译名等（导出文件含密钥，请妥善保管）。</span>
+    </div>
   </div>
 
   <!-- ============ Tabs ============ -->
@@ -830,6 +835,50 @@ function clearReview() {
   saveDraft('review');
   updateDraftHints();
   toast('已清空审稿输入框');
+}
+function exportConfig() {
+  const cfg = {
+    systemPrompt: localStorage.getItem('nets_system_prompt') || '',
+    reviewPrompt: localStorage.getItem('nets_review_prompt') || '',
+    apiKey: localStorage.getItem('nets_api_key') || '',
+    model: localStorage.getItem('nets_model') || '',
+    base: localStorage.getItem('nets_base') || '',
+    account: localStorage.getItem('nets_account') || '',
+    playerCn: localStorage.getItem('nets_player_cn') || ''
+  };
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '篮网助手配置_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('配置已导出，去另一台设备点「导入配置」即可');
+}
+function importConfig() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const cfg = JSON.parse(reader.result);
+        if (cfg.systemPrompt) localStorage.setItem('nets_system_prompt', cfg.systemPrompt);
+        if (cfg.reviewPrompt) localStorage.setItem('nets_review_prompt', cfg.reviewPrompt);
+        if (cfg.apiKey) localStorage.setItem('nets_api_key', cfg.apiKey);
+        if (cfg.model) localStorage.setItem('nets_model', cfg.model);
+        if (cfg.base) localStorage.setItem('nets_base', cfg.base);
+        if (cfg.account) localStorage.setItem('nets_account', cfg.account);
+        if (cfg.playerCn) localStorage.setItem('nets_player_cn', cfg.playerCn);
+        location.reload();
+      } catch (e) {
+        toast('导入失败：文件格式不对', true);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 function debounce(fn, ms) { let t; return function(){ clearTimeout(t); t = setTimeout(() => fn.apply(this, arguments), ms); }; }
