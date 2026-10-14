@@ -551,6 +551,18 @@
       </div>
     </div>
     <div class="card">
+      <h2><span class="bar"></span>审稿提示词（文案审稿规则）</h2>
+      <div class="hint" style="margin-bottom:8px">文案审稿用的规则提示词。🔒 默认锁定，点「✏️ 编辑」才能改，保存后审稿会使用新版本。</div>
+      <textarea id="pReview" readonly style="min-height:240px; font-size:13px"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="copyText('pReview')">📋 复制审稿提示词</button>
+        <button class="btn btn-ghost" id="revEditBtn" onclick="editReviewPrompt()">✏️ 编辑</button>
+        <button class="btn btn-primary" onclick="saveReviewPrompt()">💾 保存</button>
+        <button class="btn btn-ghost" id="revCancelBtn" onclick="cancelReviewPrompt()" style="display:none">↩️ 取消</button>
+        <button class="btn btn-ghost" onclick="resetReviewPrompt()">↺ 恢复默认</button>
+      </div>
+    </div>
+    <div class="card">
       <h2><span class="bar"></span>比赛信息输入模板</h2>
       <textarea id="pTemplate" readonly style="min-height:170px; font-size:13px"></textarea>
       <div class="btn-row"><button class="btn btn-ghost" onclick="copyText('pTemplate')">📋 复制输入模板</button></div>
@@ -960,9 +972,45 @@ function buildReviewPrompt() {
 【待审稿文案】
 ${script || '（用户未粘贴文案）'}`;
 }
+function getReviewPrompt() {
+  try { return localStorage.getItem('nets_review_prompt') || REVIEW_PROMPT; } catch (e) { return REVIEW_PROMPT; }
+}
 function copyFullPrompt(mode) {
   if (mode === 'analyze') copyToClipboard(buildSystemPrompt() + '\n\n---以下是比赛信息---\n\n' + buildUserPrompt());
-  else copyToClipboard(REVIEW_PROMPT + '\n\n---以下是待审稿文案---\n\n' + buildReviewPrompt());
+  else copyToClipboard(getReviewPrompt() + '\n\n---以下是待审稿文案---\n\n' + buildReviewPrompt());
+}
+function editReviewPrompt() {
+  $('pReview').removeAttribute('readonly');
+  $('pReview').style.borderColor = 'var(--orange)';
+  $('pReview').focus();
+  $('revEditBtn').style.display = 'none';
+  $('revCancelBtn').style.display = 'inline-flex';
+}
+function saveReviewPrompt() {
+  try { localStorage.setItem('nets_review_prompt', $('pReview').value); } catch (e) {}
+  $('pReview').setAttribute('readonly', 'readonly');
+  $('pReview').style.borderColor = '';
+  $('revEditBtn').style.display = 'inline-flex';
+  $('revCancelBtn').style.display = 'none';
+  toast('审稿提示词已保存，之后审稿将使用新版本');
+}
+function cancelReviewPrompt() {
+  $('pReview').value = getReviewPrompt();
+  $('pReview').setAttribute('readonly', 'readonly');
+  $('pReview').style.borderColor = '';
+  $('revEditBtn').style.display = 'inline-flex';
+  $('revCancelBtn').style.display = 'none';
+  toast('已取消编辑');
+}
+function resetReviewPrompt() {
+  if (!confirm('确定恢复为默认审稿提示词吗？（会丢失你已保存的修改）')) return;
+  try { localStorage.removeItem('nets_review_prompt'); } catch (e) {}
+  $('pReview').value = REVIEW_PROMPT;
+  $('pReview').setAttribute('readonly', 'readonly');
+  $('pReview').style.borderColor = '';
+  $('revEditBtn').style.display = 'inline-flex';
+  $('revCancelBtn').style.display = 'none';
+  toast('已恢复默认审稿提示词');
 }
 
 /* ================= ESPN 数据接口 ================= */
@@ -1602,7 +1650,7 @@ async function reviewScript() {
   let full = '';
   try {
     await streamChat(
-      [{ role: 'system', content: REVIEW_PROMPT }, { role: 'user', content: buildReviewPrompt() }],
+      [{ role: 'system', content: getReviewPrompt() }, { role: 'user', content: buildReviewPrompt() }],
       0.5, 4000,
       chunk => { full += chunk; body.innerHTML = renderMarkdown(full); },
       () => { $('loadingText2').textContent = '审稿完成 ✓'; }
@@ -1764,6 +1812,7 @@ window.addEventListener('beforeunload', e => { if (hasUnsaved()) { e.preventDefa
 function init() {
   loadSettings();
   $('pSystem').value = getSystemPrompt();
+  $('pReview').value = getReviewPrompt();
   $('pTemplate').value = INPUT_TEMPLATE;
   // 设置自动保存
   ['apiKey', 'model', 'baseUrl', 'accountName'].forEach(id => $(id).addEventListener('input', saveSettings));
